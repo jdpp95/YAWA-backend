@@ -1,20 +1,39 @@
-const DarkSky = require('dark-sky')
-const darksky = new DarkSky(process.env.DARK_SKY)
+const axios = require('axios');
 
 const darkSkyTest = async (req, res) => {
 
-    darksky
-        .latitude(4.6116)
-        .longitude(-74.2069)
-        .time(req.query.time)
-        .units('si')
-        .get()
-        .then(r => {
-            res.json(r)
-        })
-        .catch(console.log)
+    let { date, time, lat, long, coords } = req.query;
+    //TODO: Format time
 
-    
+    const darkSkyUrl = "https://api.darksky.net/forecast";
+    const darkSkyKey = process.env.DARK_SKY;
+
+    let baseURL = "";
+    if(coords){
+        baseURL = `${darkSkyUrl}/${darkSkyKey}/${coords}`;
+    } else {
+        baseURL = `${darkSkyUrl}/${darkSkyKey}/${lat},${long}`;
+    }
+
+    if(time){
+        baseURL += `,${time}`
+    }
+
+    try {
+        const instance = axios.create({
+            baseURL,
+            params: {units: 'ca'}
+        });
+
+        const response = await instance.get();
+
+        res.json(response.data);
+    } catch (error) {
+        console.log(error)
+        res.status(400).json({
+            error
+        })
+    }
 }
 
 module.exports = {
