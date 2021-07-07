@@ -3,7 +3,6 @@ const axios = require('axios');
 const darkSkyTest = async (req, res) => {
 
     let { date, time, lat, long, coords } = req.query;
-    //TODO: Format time
 
     const darkSkyUrl = "https://api.darksky.net/forecast";
     const darkSkyKey = process.env.DARK_SKY;
