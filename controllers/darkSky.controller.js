@@ -7,11 +7,11 @@ const darkSky = async (req, res) => {
     const darkSkyUrl = "https://api.darksky.net/forecast";
     const darkSkyKey = process.env.DARK_SKY;
 
-    let baseURL = "";
+    let baseURL = `${darkSkyUrl}/${darkSkyKey}/`;
     if(coords){
-        baseURL = `${darkSkyUrl}/${darkSkyKey}/${coords}`;
+        baseURL += `${coords}`;
     } else {
-        baseURL = `${darkSkyUrl}/${darkSkyKey}/${lat},${long}`;
+        baseURL += `${lat},${long}`;
     }
     
     if(time && timestamp){
@@ -28,7 +28,7 @@ const darkSky = async (req, res) => {
         baseURL += `,${timestamp}`
     }
 
-    console.log(baseURL)
+    //console.log(baseURL)
 
     try {
         const instance = axios.create({
