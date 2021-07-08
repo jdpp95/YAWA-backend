@@ -1,8 +1,8 @@
 const axios = require('axios');
 
-const darkSkyTest = async (req, res) => {
-
-    let { date, time, lat, long, coords } = req.query;
+const darkSky = async (req, res) => {
+    
+    let { coords, lat, long, time, timestamp } = req.query;
 
     const darkSkyUrl = "https://api.darksky.net/forecast";
     const darkSkyKey = process.env.DARK_SKY;
@@ -13,10 +13,22 @@ const darkSkyTest = async (req, res) => {
     } else {
         baseURL = `${darkSkyUrl}/${darkSkyKey}/${lat},${long}`;
     }
+    
+    if(time && timestamp){
+        res.status(400).json({
+            error: "Please don't send time and timestamp simultaneously"
+        })
+    }
 
     if(time){
         baseURL += `,${time}`
     }
+
+    if(timestamp){
+        baseURL += `,${timestamp}`
+    }
+
+    console.log(baseURL)
 
     try {
         const instance = axios.create({
@@ -36,5 +48,5 @@ const darkSkyTest = async (req, res) => {
 }
 
 module.exports = {
-    darkSkyTest
+    darkSky
 }

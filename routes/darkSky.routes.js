@@ -1,8 +1,8 @@
-const { darkSkyTest } = require('../controllers/darkSky.controller')
+const { darkSky } = require('../controllers/darkSky.controller')
 const { Router } = require('express');
 
 const router = Router();
 
-router.get('/', darkSkyTest);
+router.get('/', darkSky);
 
 module.exports = router;
