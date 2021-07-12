@@ -3,6 +3,6 @@ const { Router } = require('express');
 
 const router = Router();
 
-router.get('/', darkSky);
+router.get('/darkSky', darkSky);
 
 module.exports = router;
