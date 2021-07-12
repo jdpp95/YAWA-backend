@@ -28,8 +28,7 @@ const darkSky = async (req, res) => {
         baseURL += `,${timestamp}`
     }
 
-    //console.log(baseURL)
-
+    //TODO: Refactor into a new method
     try {
         const instance = axios.create({
             baseURL,
