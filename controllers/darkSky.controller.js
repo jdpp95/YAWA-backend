@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { getSunAngleFromTime } = require("../utils/getSunAngleFromTime");
+const { getSunAngleFromTime, getSunAngleFromTimestamp } = require("../utils/getSunAngleFromTime");
 
 const darkSky = async (req, res) => {
     
@@ -31,7 +31,7 @@ const darkSky = async (req, res) => {
 
     if(timestamp){
         baseURL += `,${timestamp}`
-        // getSunAngleFromTimestamp(timestamp);
+        sunAngle = getSunAngleFromTimestamp(timestamp, lat, long, utc);
     }
 
     console.log(`Sun angle: ${sunAngle}`)

@@ -2,18 +2,23 @@ const TO_RADIANS = Math.PI / 180;
 const TO_DEGREES = 180 / Math.PI;
 
 const getSunAngleFromTime = (time, latitude, longitude, utc) => {
+    const unixDate = Date.parse(time)/1000;
+    return getSunAngleFromTimestamp(unixDate, latitude, longitude, utc);
+};
+
+const getSunAngleFromTimestamp = (timestamp, latitude, longitude, utc) => {
     latitude *= TO_RADIANS;
 
-    const unixDate = Date.parse(time);
-    const date = new Date(unixDate);
+    const date = new Date(timestamp*1000);
     let dayOfYear = getDayOfYear(date);
 
     let declination = getDeclination(dayOfYear) * TO_RADIANS;
-    let hourAngle = getHourAngle(longitude, dayOfYear, date.getHours(), utc) * TO_RADIANS;
+    let localTime = date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
+    let hourAngle = getHourAngle(longitude, dayOfYear, localTime, utc) * TO_RADIANS;
 
     return Math.asin(Math.sin(declination) * Math.sin(latitude) 
         + Math.cos(declination) * Math.cos(latitude) * Math.cos(hourAngle)) * TO_DEGREES;
-};
+}
 
 const getDayOfYear = (date) => {
     const start = new Date(date.getFullYear(), 0, 0);
@@ -37,5 +42,6 @@ const getHourAngle = (longitude, dayOfYear, localTime, utc) => {
 }
 
 module.exports = {
-    getSunAngleFromTime
+    getSunAngleFromTime,
+    getSunAngleFromTimestamp
 };
