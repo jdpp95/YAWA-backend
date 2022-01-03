@@ -10,6 +10,7 @@ const getSunAngleFromTimestamp = (timestamp, latitude, longitude, utc) => {
     latitude *= TO_RADIANS;
 
     const date = new Date(timestamp*1000);
+    console.log(date)
     let dayOfYear = getDayOfYear(date);
 
     let declination = getDeclination(dayOfYear) * TO_RADIANS;
