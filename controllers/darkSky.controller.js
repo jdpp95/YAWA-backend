@@ -1,8 +1,9 @@
 const axios = require('axios');
+const { getSunAngleFromTime } = require("../utils/getSunAngleFromTime");
 
 const darkSky = async (req, res) => {
     
-    let { coords, lat, long, time, timestamp } = req.query;
+    let { coords, lat, long, time, timestamp, utc } = req.query;
 
     const darkSkyUrl = "https://api.darksky.net/forecast";
     const darkSkyKey = process.env.DARK_SKY;
@@ -10,6 +11,7 @@ const darkSky = async (req, res) => {
     let baseURL = `${darkSkyUrl}/${darkSkyKey}/`;
     if(coords){
         baseURL += `${coords}`;
+        [lat, long] = coords.split(/,\s*/g)
     } else {
         baseURL += `${lat},${long}`;
     }
@@ -20,13 +22,19 @@ const darkSky = async (req, res) => {
         })
     }
 
+    let sunAngle;
+
     if(time){
-        baseURL += `,${time}`
+        baseURL += `,${time}`;
+        sunAngle = getSunAngleFromTime(time, lat, long, utc);
     }
 
     if(timestamp){
         baseURL += `,${timestamp}`
+        // getSunAngleFromTimestamp(timestamp);
     }
+
+    console.log(`Sun angle: ${sunAngle}`)
 
     //TODO: Refactor into a new method
     try {
