@@ -9,6 +9,8 @@ const getSunAngleFromTime = (time, latitude, longitude, utc) => {
 const getSunAngleFromTimestamp = (timestamp, latitude, longitude, utc) => {
     latitude *= TO_RADIANS;
 
+    console.log(`Timestamp: ${timestamp}`)
+
     const date = new Date(timestamp*1000);
     console.log(date)
     let dayOfYear = getDayOfYear(date);
