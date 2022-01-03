@@ -34,7 +34,10 @@ const darkSky = async (req, res) => {
         sunAngle = getSunAngleFromTimestamp(timestamp, lat, long, utc);
     }
 
-    console.log(`Sun angle: ${sunAngle}`)
+    if(!time && !timestamp){
+        const isoDate = new Date().toISOString();
+        sunAngle = getSunAngleFromTime(isoDate, lat, long, utc);
+    }
 
     //TODO: Refactor into a new method
     try {
@@ -44,6 +47,8 @@ const darkSky = async (req, res) => {
         });
 
         const response = await instance.get();
+
+        response.data.sunAngle = sunAngle;
 
         res.json(response.data);
     } catch (error) {
