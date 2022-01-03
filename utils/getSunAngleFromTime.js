@@ -10,11 +10,11 @@ const getSunAngleFromTimestamp = (timestamp, latitude, longitude, utc) => {
     latitude *= TO_RADIANS;
 
     const date = new Date(timestamp*1000);
-    console.log(date)
     let dayOfYear = getDayOfYear(date);
 
     let declination = getDeclination(dayOfYear) * TO_RADIANS;
     let localTime = date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
+    console.log(`Local time: ${localTime}`)
     let hourAngle = getHourAngle(longitude, dayOfYear, localTime, utc) * TO_RADIANS;
 
     return Math.asin(Math.sin(declination) * Math.sin(latitude) 
