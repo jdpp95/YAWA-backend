@@ -49,6 +49,10 @@ const darkSky = async (req, res) => {
         const response = await instance.get();
 
         response.data.sunAngle = sunAngle;
+        response.data.hourly.data.forEach((item) => {
+            let sunAngle = getSunAngleFromTimestamp(item.time, lat, long, utc);
+            item.sunAngle = sunAngle;
+        })
 
         res.json(response.data);
     } catch (error) {
