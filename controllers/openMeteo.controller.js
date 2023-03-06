@@ -4,9 +4,8 @@ const { getSunAngleFromTime, getSunAngleFromTimestamp } = require("../utils/getS
 const openMeteo = async (req, res) => {
     let { coords, lat, long, time, timestamp, utc } = req.query;
 
-    const openMeteoUrl = "https://api.open-meteo.com/v1/forecast";
-
-    // https://api.open-meteo.com/v1/forecast?latitude=4.6111&longitude=-74.21&hourly=temperature_2m,relativehumidity_2m,dewpoint_2m,apparent_temperature,precipitation,snow_depth,cloudcover,visibility,windspeed_10m&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&current_weather=true&timezone=America%2FNew_York
+    const openMeteoForecastUrl = "https://api.open-meteo.com/v1/forecast";
+    // const openMeteoHistoryUrl = "https://archive-api.open-meteo.com/v1/archive";
 
     // If time or timestamp are not included on the request, assume that the current weather is requested.
     let currentWeather = !time && !timestamp;
@@ -16,8 +15,8 @@ const openMeteo = async (req, res) => {
     }
 
     try {
-        const instance = axios.create({
-            baseURL: openMeteoUrl,
+        const currentWeatherParams = {
+            baseURL: openMeteoForecastUrl,
             params: {
                 latitude: lat,
                 longitude: long,
@@ -26,7 +25,9 @@ const openMeteo = async (req, res) => {
                 current_weather: currentWeather,
                 timezone: "auto"
             }
-        });
+        };
+
+        const instance = axios.create(currentWeatherParams);
 
         const apiResponse = await instance.get();
 
@@ -44,7 +45,7 @@ const openMeteo = async (req, res) => {
             temperature: apiResponse.data.current_weather.temperature,
             humidity: apiResponse.data.hourly.relativehumidity_2m[localHour]/100,
             dewPoint: apiResponse.data.hourly.dewpoint_2m[localHour],
-            cloudCover: apiResponse.data.hourly.cloudcover[localHour],
+            cloudCover: apiResponse.data.hourly.cloudcover[localHour]/100,
             // summary: "Fair",
             windSpeed: apiResponse.data.hourly.windspeed_10m[localHour],
             visibility: apiResponse.data.hourly.visibility[localHour]/1000,
