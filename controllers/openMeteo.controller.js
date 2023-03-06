@@ -40,6 +40,10 @@ const openMeteo = async (req, res) => {
         // Build response
         const response = { data: {} };
 
+        response.data.latitude = apiResponse.data.latitude;
+        response.data.longitude = apiResponse.data.longitude;
+        response.data.elevation = apiResponse.data.elevation;
+
         response.data.sunAngle = sunAngle;
         response.data.currently = {
             temperature: apiResponse.data.current_weather.temperature,
