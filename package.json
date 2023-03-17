@@ -16,5 +16,8 @@
     "express": "^4.17.1",
     "express-validator": "^6.12.0",
     "nodemon": "^2.0.9"
+  },
+  "devDependencies": {
+    "moment": "^2.29.4"
   }
 }
