@@ -42,8 +42,10 @@ const openMeteo = async (req, res) => {
                 longitude: long,
                 hourly: "temperature_2m,relativehumidity_2m,dewpoint_2m,apparent_temperature,precipitation,snow_depth,cloudcover,visibility,windspeed_10m",
                 daily: "temperature_2m_max,temperature_2m_min,sunrise,sunset",
-                current_weather: currentWeather,
-                timezone: "auto"
+                current_weather: true,
+                timezone: "auto",
+                past_days: 7,
+                timeformat: "unixtime"
             }
         };
 
@@ -56,13 +58,23 @@ const openMeteo = async (req, res) => {
                 end_date: isoDateEnd,
                 hourly: "temperature_2m,relativehumidity_2m,dewpoint_2m,apparent_temperature,precipitation,cloudcover,windspeed_10m",
                 daily: "temperature_2m_max,temperature_2m_min,temperature_2m_mean,sunrise,sunset",
-                // current_weather: currentWeather,
                 timezone: "auto",
                 timeformat: "unixtime"
             }
         }
 
-        const instance = axios.create(currentWeather ? currentWeatherParams : historicalWeatherParams);
+        // If the provided data is older than 7 days the historical API will be
+        // used, otherwise, thr forecast API will bring the data from the
+        // last 7 days
+        let isHistorical = (() => {
+            // If the date is not provided assume that current data is being requested.
+            if(!date) return false;
+
+            let oneWeekAgo = moment().subtract(7, 'days');
+            return date.isBefore(oneWeekAgo);
+        })();
+
+        const instance = axios.create(isHistorical ? historicalWeatherParams : currentWeatherParams);
 
         const apiResponse = await instance.get();
 
@@ -94,7 +106,6 @@ const openMeteo = async (req, res) => {
                 humidity: apiResponse.data.hourly.relativehumidity_2m[localHour] / 100,
                 dewPoint: apiResponse.data.hourly.dewpoint_2m[localHour],
                 cloudCover: apiResponse.data.hourly.cloudcover[localHour] / 100,
-                // summary: "Fair",
                 windSpeed: apiResponse.data.hourly.windspeed_10m[localHour],
                 visibility: apiResponse.data.hourly.visibility[localHour] / 1000,
                 precipIntensity: apiResponse.data.hourly.precipitation[localHour],
@@ -153,10 +164,6 @@ const openMeteo = async (req, res) => {
                 }
             ]
         }
-        // response.data.hourly.data.forEach((item) => {
-        //     let sunAngle = getSunAngleFromTimestamp(item.time, lat, long, utc);
-        //     item.sunAngle = sunAngle;
-        // });
 
         res.json(response.data);
     } catch (error) {
