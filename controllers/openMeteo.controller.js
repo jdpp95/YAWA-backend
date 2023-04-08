@@ -98,7 +98,7 @@ const openMeteo = async (req, res) => {
         response.data.longitude = apiResponse.data.longitude;
         response.data.elevation = apiResponse.data.elevation;
 
-        response.data.sunAngle = getSunAngleFromTimestamp(timestamp, lat, long, utc);
+        response.data.sunAngle = sunAngle;
 
         if (currentWeather) {
             response.data.currently = {
