@@ -4,12 +4,21 @@ const { getSunAngleFromTime, getSunAngleFromTimestamp } = require("../utils/getS
 const { transition } = require("../utils/transition.js")
 
 const openMeteo = async (req, res) => {
-    let { coords, lat, long, time, timestamp, utc } = req.query;
+    let {
+        coords,
+        lat,
+        long,
+        time,
+        timestamp,
+        start_timestamp: startTimestamp,
+        end_timestamp: endTimestamp,
+        utc
+    } = req.query;
 
     const openMeteoForecastUrl = "https://api.open-meteo.com/v1/forecast";
     const openMeteoHistoryUrl = "https://archive-api.open-meteo.com/v1/archive";
 
-    // If time or timestamp are not included on the request, assume that the current weather is requested.
+    // If time or timestamp are not included on the request, assume that the current weather is being requested.
     let currentWeather = !time && !timestamp;
     if (currentWeather) {
         const isoDate = new Date().toISOString();
@@ -30,11 +39,24 @@ const openMeteo = async (req, res) => {
 
         //Return date back to its original value
         date.subtract(1, 'day')
+    } else if (startTimestamp && endTimestamp) {
+        //Get start date
+        date = moment(startTimestamp * 1000);
+        isoDateStart = date.format("YYYY-MM-DD");
+
+        //Get finish date
+        date = moment(endTimestamp * 1000);
+        isoDateEnd = date.format("YYYY-MM-DD");
+
+        //Return date back to its original value
+        // date.subtract(1, 'day')
     } else if (time) {
         res.status(501).json("Time in ISO format parsing has not been implemented yet")
     }
 
     try {
+        let currentWeatherPastDays = 7;
+
         const currentWeatherParams = {
             baseURL: openMeteoForecastUrl,
             params: {
@@ -44,7 +66,7 @@ const openMeteo = async (req, res) => {
                 daily: "temperature_2m_max,temperature_2m_min,sunrise,sunset",
                 current_weather: true,
                 timezone: "auto",
-                past_days: 7,
+                past_days: currentWeatherPastDays,
                 timeformat: "unixtime"
             }
         };
@@ -68,7 +90,7 @@ const openMeteo = async (req, res) => {
         // last 7 days
         let isHistorical = (() => {
             // If the date is not provided assume that current data is being requested.
-            if(!date) return false;
+            if (!date) return false;
 
             let oneWeekAgo = moment().subtract(7, 'days');
             return date.isBefore(oneWeekAgo);
@@ -111,6 +133,34 @@ const openMeteo = async (req, res) => {
                 precipIntensity: apiResponse.data.hourly.precipitation[localHour],
                 apparentTemperature: apiResponse.data.hourly.apparent_temperature[localHour]
             }
+
+            response.data.hourly = { data: [] };
+            apiResponse.data.hourly.time.forEach((unixTime, index) => {
+
+                let isWithinRange = false;
+
+                if(startTimestamp && endTimestamp){
+                    isWithinRange = unixTime >= startTimestamp && unixTime <= endTimestamp;
+                }
+                
+                if(timestamp){
+                    // TODO: Last 24 hours 
+                }
+
+                if (isWithinRange) {
+                    response.data.hourly.data.push({
+                        time: unixTime,
+                        temperature: apiResponse.data.hourly.temperature_2m[index],
+                        humidity: apiResponse.data.hourly.relativehumidity_2m[index] / 100,
+                        dewPoint: apiResponse.data.hourly.dewpoint_2m[index],
+                        cloudCover: apiResponse.data.hourly.cloudcover[index] / 100,
+                        precipIntensity: apiResponse.data.hourly.precipitation[index],
+                        windSpeed: apiResponse.data.hourly.windspeed_10m[index],
+                        apparentTemperature: apiResponse.data.hourly.apparent_temperature[index],
+                        sunAngle: getSunAngleFromTimestamp(unixTime, lat, long, utc)
+                    });
+                }
+            });
         } else {
             // Display the data which spans from local date at 0h to local date at 23h
             response.data.hourly = { data: [] }
