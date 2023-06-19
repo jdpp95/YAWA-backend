@@ -19,7 +19,7 @@ const openMeteo = async (req, res) => {
     const openMeteoHistoryUrl = "https://archive-api.open-meteo.com/v1/archive";
 
     // If time or timestamp are not included on the request, assume that the current weather is being requested.
-    let currentWeather = !time && !timestamp;
+    let currentWeather = !time && !timestamp && !startTimestamp && !endTimestamp;
     if (currentWeather) {
         const isoDate = new Date().toISOString();
         sunAngle = getSunAngleFromTime(isoDate, lat, long, utc);
@@ -122,16 +122,19 @@ const openMeteo = async (req, res) => {
 
         response.data.sunAngle = sunAngle;
 
-        if (currentWeather) {
-            response.data.currently = {
-                temperature: apiResponse.data.current_weather.temperature,
-                humidity: apiResponse.data.hourly.relativehumidity_2m[localHour] / 100,
-                dewPoint: apiResponse.data.hourly.dewpoint_2m[localHour],
-                cloudCover: apiResponse.data.hourly.cloudcover[localHour] / 100,
-                windSpeed: apiResponse.data.hourly.windspeed_10m[localHour],
-                visibility: apiResponse.data.hourly.visibility[localHour] / 1000,
-                precipIntensity: apiResponse.data.hourly.precipitation[localHour],
-                apparentTemperature: apiResponse.data.hourly.apparent_temperature[localHour]
+        if (currentWeather || (startTimestamp && endTimestamp)) {
+
+            if (currentWeather) {
+                response.data.currently = {
+                    temperature: apiResponse.data.current_weather.temperature,
+                    humidity: apiResponse.data.hourly.relativehumidity_2m[localHour] / 100,
+                    dewPoint: apiResponse.data.hourly.dewpoint_2m[localHour],
+                    cloudCover: apiResponse.data.hourly.cloudcover[localHour] / 100,
+                    windSpeed: apiResponse.data.hourly.windspeed_10m[localHour],
+                    visibility: apiResponse.data.hourly.visibility[localHour] / 1000,
+                    precipIntensity: apiResponse.data.hourly.precipitation[localHour],
+                    apparentTemperature: apiResponse.data.hourly.apparent_temperature[localHour]
+                }
             }
 
             response.data.hourly = { data: [] };
@@ -139,11 +142,11 @@ const openMeteo = async (req, res) => {
 
                 let isWithinRange = false;
 
-                if(startTimestamp && endTimestamp){
+                if (startTimestamp && endTimestamp) {
                     isWithinRange = unixTime >= startTimestamp && unixTime <= endTimestamp;
                 }
-                
-                if(timestamp){
+
+                if (timestamp) {
                     // TODO: Last 24 hours 
                 }
 
