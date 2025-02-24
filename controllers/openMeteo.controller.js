@@ -1,7 +1,8 @@
 const axios = require("axios");
 const moment = require('moment');
 const { getSunAngleFromTime, getSunAngleFromTimestamp } = require("../utils/getSunAngleFromTime");
-const { transition } = require("../utils/transition.js")
+const { transition } = require("../utils/transition.js");
+const { computeIndoorTemperature } = require("../utils/computeIndoorTemperature.js");
 
 const openMeteo = async (req, res) => {
     let {
@@ -86,7 +87,7 @@ const openMeteo = async (req, res) => {
         }
 
         // If the provided data is older than 7 days the historical API will be
-        // used, otherwise, thr forecast API will bring the data from the
+        // used, otherwise, the forecast API will bring the data from the
         // last 7 days
         let isHistorical = (() => {
             // If the date is not provided assume that current data is being requested.
@@ -114,13 +115,18 @@ const openMeteo = async (req, res) => {
         }
 
         // Build response
-        const response = { data: {} };
+        let response = { data: {} };
 
-        response.data.latitude = apiResponse.data.latitude;
-        response.data.longitude = apiResponse.data.longitude;
-        response.data.elevation = apiResponse.data.elevation;
-
-        response.data.sunAngle = sunAngle;
+        response = {
+            ...response,
+            data: {
+                ...response.data,
+                latitude: apiResponse.data.latitude,
+                longitude: apiResponse.data.longitude,
+                elevation: apiResponse.data.elevation,
+                sunAngle: sunAngle
+            }
+        };
 
         if (currentWeather || (startTimestamp && endTimestamp)) {
 
@@ -169,20 +175,25 @@ const openMeteo = async (req, res) => {
             response.data.hourly = { data: [] }
 
             let lowerIndex, upperIndex = -1, minutesPassed = -1;
-            apiResponse.data.hourly.time.forEach((unixTime, index) => {
+            let indoorTemp, previousIndoorTemp;
+            const now = moment().unix();
+            apiResponse.data.hourly.time.forEach((unixTime, index) => {            
+                if(unixTime <= now){
+                    const currentTemperature = apiResponse.data.hourly.temperature_2m[index]
+                    previousIndoorTemp = indoorTemp !== undefined ? indoorTemp : currentTemperature;
+                    indoorTemp = computeIndoorTemperature(currentTemperature, previousIndoorTemp, 0.015, 0.15);
+                }
                 response.data.hourly.data.push({
                     time: unixTime,
                     temperature: apiResponse.data.hourly.temperature_2m[index],
+                    apparentTemperature: apiResponse.data.hourly.apparent_temperature[index],
                     humidity: apiResponse.data.hourly.relativehumidity_2m[index] / 100,
                     dewPoint: apiResponse.data.hourly.dewpoint_2m[index],
                     cloudCover: apiResponse.data.hourly.cloudcover[index] / 100,
                     precipIntensity: apiResponse.data.hourly.precipitation[index],
                     windSpeed: apiResponse.data.hourly.windspeed_10m[index],
-                    apparentTemperature: apiResponse.data.hourly.apparent_temperature[index],
                     sunAngle: getSunAngleFromTimestamp(unixTime, lat, long, utc)
                 });
-
-                // console.log(`${index}: upperIndex = ${upperIndex}, unixTime = ${unixTime}, timestamp = ${timestamp}`)
 
                 if (upperIndex === -1 && unixTime > timestamp) {
                     upperIndex = index;
@@ -200,10 +211,10 @@ const openMeteo = async (req, res) => {
                 humidity: transition(lowerIndexItem.humidity, upperIndexItem.humidity, 0, 60, minutesPassed),
                 dewPoint: transition(lowerIndexItem.dewPoint, upperIndexItem.dewPoint, 0, 60, minutesPassed),
                 cloudCover: transition(lowerIndexItem.cloudCover, upperIndexItem.cloudCover, 0, 60, minutesPassed),
-                // summary:          "Fair",
                 windSpeed: transition(lowerIndexItem.windSpeed, upperIndexItem.windSpeed, 0, 60, minutesPassed),
                 precipIntensity: transition(lowerIndexItem.precipIntensity, upperIndexItem.precipIntensity, 0, 60, minutesPassed),
-                apparentTemperature: transition(lowerIndexItem.apparentTemperature, upperIndexItem.apparentTemperature, 0, 60, minutesPassed)
+                apparentTemperature: transition(lowerIndexItem.apparentTemperature, upperIndexItem.apparentTemperature, 0, 60, minutesPassed),
+                indoorTemp
             }
         }
 
