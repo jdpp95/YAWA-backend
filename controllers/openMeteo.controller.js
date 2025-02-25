@@ -174,14 +174,40 @@ const openMeteo = async (req, res) => {
             // Display the data which spans from local date at 0h to local date at 23h
             response.data.hourly = { data: [] }
 
+            const thermodynamics = {
+                left: {
+                    increaseFactor: 0.15,
+                    decreaseFactor: 0.015
+                },
+                right: {
+                    increaseFactor: 0.45,
+                    decreaseFactor: 0.07
+                }
+            };
             let lowerIndex, upperIndex = -1, minutesPassed = -1;
-            let indoorTemp, previousIndoorTemp;
+            let indoorTemp = { left: null, right: null };
+            let previousIndoorTemp = { left: null, right: null };
             const now = moment().unix();
-            apiResponse.data.hourly.time.forEach((unixTime, index) => {            
-                if(unixTime <= now){
+            apiResponse.data.hourly.time.forEach((unixTime, index) => {
+                if (unixTime <= now) {
                     const currentTemperature = apiResponse.data.hourly.temperature_2m[index]
-                    previousIndoorTemp = indoorTemp !== undefined ? indoorTemp : currentTemperature;
-                    indoorTemp = computeIndoorTemperature(currentTemperature, previousIndoorTemp, 0.015, 0.15);
+                    if (indoorTemp.left === null) {
+                        previousIndoorTemp = { left: currentTemperature, right: currentTemperature };
+                    } else {
+                        previousIndoorTemp = { ...indoorTemp };
+                    }
+                    indoorTemp.left = computeIndoorTemperature(
+                        currentTemperature, 
+                        previousIndoorTemp.left, 
+                        thermodynamics.left.decreaseFactor, 
+                        thermodynamics.left.increaseFactor
+                    );
+                    indoorTemp.right = computeIndoorTemperature(
+                        currentTemperature, 
+                        previousIndoorTemp.right, 
+                        thermodynamics.right.decreaseFactor, 
+                        thermodynamics.right.increaseFactor
+                    );
                 }
                 response.data.hourly.data.push({
                     time: unixTime,
