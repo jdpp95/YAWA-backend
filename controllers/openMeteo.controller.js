@@ -31,11 +31,11 @@ const openMeteo = async (req, res) => {
     let isoDateStart, isoDateEnd, date;
     if (timestamp) {
         //Get start date
-        date = moment(timestamp * 1000).subtract(1, 'day');
+        date = moment(timestamp * 1000).subtract(1 + 6, 'day');
         isoDateStart = date.format("YYYY-MM-DD");
 
         //Get finish date
-        date.add(2, 'day')
+        date.add(2 + 6, 'day')
         isoDateEnd = date.format("YYYY-MM-DD");
 
         //Return date back to its original value
@@ -187,9 +187,8 @@ const openMeteo = async (req, res) => {
             let lowerIndex, upperIndex = -1, minutesPassed = -1;
             let indoorTemp = { left: null, right: null };
             let previousIndoorTemp = { left: null, right: null };
-            const now = moment().unix();
             apiResponse.data.hourly.time.forEach((unixTime, index) => {
-                if (unixTime <= now) {
+                if (unixTime <= timestamp) {
                     const currentTemperature = apiResponse.data.hourly.temperature_2m[index]
                     if (indoorTemp.left === null) {
                         previousIndoorTemp = { left: currentTemperature, right: currentTemperature };
@@ -207,6 +206,13 @@ const openMeteo = async (req, res) => {
                         previousIndoorTemp.right, 
                         thermodynamics.right.decreaseFactor, 
                         thermodynamics.right.increaseFactor
+                    );
+                    console.log(
+                        moment.unix(unixTime).format('YYYY-MM-DD HH:mm Z'), 
+                        currentTemperature, 
+                        indoorTemp.left.toFixed(1), 
+                        indoorTemp.right.toFixed(1),
+                        moment.unix(timestamp).format('YYYY-MM-DD HH:mm Z')
                     );
                 }
                 response.data.hourly.data.push({
