@@ -124,6 +124,7 @@ const openMeteo = async (req, res) => {
                 latitude: apiResponse.data.latitude,
                 longitude: apiResponse.data.longitude,
                 elevation: apiResponse.data.elevation,
+                offset: utc,
                 sunAngle: sunAngle
             }
         };
@@ -166,7 +167,7 @@ const openMeteo = async (req, res) => {
                         precipIntensity: apiResponse.data.hourly.precipitation[index],
                         windSpeed: apiResponse.data.hourly.windspeed_10m[index],
                         apparentTemperature: apiResponse.data.hourly.apparent_temperature[index],
-                        sunAngle: getSunAngleFromTimestamp(unixTime, lat, long, utc)
+                        sunAngle: getSunAngleFromTimestamp(unixTime, lat, long, utc),
                     });
                 }
             });
@@ -207,13 +208,15 @@ const openMeteo = async (req, res) => {
                         thermodynamics.right.decreaseFactor, 
                         thermodynamics.right.increaseFactor
                     );
-                    console.log(
-                        moment.unix(unixTime).format('YYYY-MM-DD HH:mm Z'), 
+                    console.log({
+                        time: moment.unix(unixTime).format('YYYY-MM-DD HH:mm Z'), 
                         currentTemperature, 
-                        indoorTemp.left.toFixed(1), 
-                        indoorTemp.right.toFixed(1),
-                        moment.unix(timestamp).format('YYYY-MM-DD HH:mm Z')
-                    );
+                        indoorTemp: [
+                            indoorTemp.left.toFixed(1),
+                            indoorTemp.right.toFixed(1)
+                        ], 
+                        timestamp: moment.unix(timestamp).format('YYYY-MM-DD HH:mm Z')
+                    });
                 }
                 response.data.hourly.data.push({
                     time: unixTime,
