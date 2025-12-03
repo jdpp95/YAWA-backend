@@ -4,6 +4,66 @@ const { getSunAngleFromTime, getSunAngleFromTimestamp } = require("../utils/getS
 const { transition } = require("../utils/transition.js");
 const { computeIndoorTemperature } = require("../utils/computeIndoorTemperature.js");
 
+// Reusable function to compute temperature correction
+async function getTemperatureCorrection(historicalParams, currentParams, daysAgo = 7) {
+  // Fetch the current/forecast response first so we can obtain the location's utc offset
+  const currentInstance = axios.create(currentParams);
+  const currentResp = await currentInstance.get();
+
+  // utc_offset_seconds is included by open-meteo responses
+  const offsetSeconds = currentResp.data.utc_offset_seconds || 0;
+  const offsetMinutes = offsetSeconds / 60; // moment expects minutes for utcOffset
+
+  // Compute target local date (e.g. 7 days ago) using the location's offset
+  const targetDate = moment().utcOffset(offsetMinutes).subtract(daysAgo, 'days').format('YYYY-MM-DD');
+
+  // Filter forecast hourly temps for that local date
+  const forecastTimes = currentResp.data.hourly.time;      // unix times (seconds)
+  const forecastTemps = currentResp.data.hourly.temperature_2m;
+  const forecastTempsForDate = [];
+
+  for (let i = 0; i < forecastTimes.length; i++) {
+    const localDate = moment.unix(forecastTimes[i]).utcOffset(offsetMinutes).format('YYYY-MM-DD');
+    if (localDate === targetDate) forecastTempsForDate.push(forecastTemps[i]);
+  }
+
+  // If forecast has no entries for that date (rare), fall back to last 24 hours slice
+  const forecastSamples = (forecastTempsForDate.length > 0) ? forecastTempsForDate : forecastTemps.slice(0, 24);
+  const forecastAvg = forecastSamples.reduce((s, v) => s + v, 0) / forecastSamples.length;
+
+  // Now fetch historical data for the computed targetDate
+  const historicalParamsWithDate = {
+    ...historicalParams,
+    params: {
+      ...historicalParams.params,
+      start_date: targetDate,
+      end_date: targetDate,
+      timezone: 'auto',
+      timeformat: 'unixtime'
+    }
+  };
+  const historicalInstance = axios.create(historicalParamsWithDate);
+  const historicalResp = await historicalInstance.get();
+
+  // Filter historical hourly temps for that same local date using the same offsetMinutes
+  const histTimes = historicalResp.data.hourly.time;
+  const histTemps = historicalResp.data.hourly.temperature_2m;
+  const historicalTempsForDate = [];
+
+  for (let i = 0; i < histTimes.length; i++) {
+    const localDate = moment.unix(histTimes[i]).utcOffset(offsetMinutes).format('YYYY-MM-DD');
+    if (localDate === targetDate) historicalTempsForDate.push(histTemps[i]);
+  }
+
+  // If historical results are empty (bad response), return 0 correction to be safe
+  if (historicalTempsForDate.length === 0) return 0;
+
+  const historicalAvg = historicalTempsForDate.reduce((s, v) => s + v, 0) / historicalTempsForDate.length;
+
+  // Correction = historicalAvg - forecastAvg (apply this to forecast current temperature)
+  return historicalAvg - forecastAvg;
+}
+
 const openMeteo = async (req, res) => {
     let {
         coords,
@@ -101,6 +161,16 @@ const openMeteo = async (req, res) => {
 
         const apiResponse = await instance.get();
 
+        const temperatureCorrection = await getTemperatureCorrection(historicalWeatherParams, currentWeatherParams);
+        console.log("Temperature correction:", temperatureCorrection.toFixed(2), "°C");
+        if(!isHistorical) {
+            console.log(apiResponse.data.daily);
+            apiResponse.data.current_weather.temperature += temperatureCorrection;
+            apiResponse.data.hourly.temperature_2m = apiResponse.data.hourly.temperature_2m.map(temp => temp + temperatureCorrection);
+            apiResponse.data.hourly.apparent_temperature = apiResponse.data.hourly.apparent_temperature = [];
+            apiResponse.data.hourly.dewpoint_2m = apiResponse.data.hourly.dewpoint_2m.map(temp => temp + temperatureCorrection);
+        }
+
         // Get metadata from response
 
         let utc = apiResponse.data.utc_offset_seconds / 3600;
@@ -197,26 +267,17 @@ const openMeteo = async (req, res) => {
                         previousIndoorTemp = { ...indoorTemp };
                     }
                     indoorTemp.left = computeIndoorTemperature(
-                        currentTemperature, 
-                        previousIndoorTemp.left, 
-                        thermodynamics.left.decreaseFactor, 
+                        currentTemperature,
+                        previousIndoorTemp.left,
+                        thermodynamics.left.decreaseFactor,
                         thermodynamics.left.increaseFactor
                     );
                     indoorTemp.right = computeIndoorTemperature(
-                        currentTemperature, 
-                        previousIndoorTemp.right, 
-                        thermodynamics.right.decreaseFactor, 
+                        currentTemperature,
+                        previousIndoorTemp.right,
+                        thermodynamics.right.decreaseFactor,
                         thermodynamics.right.increaseFactor
                     );
-                    console.log({
-                        time: moment.unix(unixTime).format('YYYY-MM-DD HH:mm Z'), 
-                        currentTemperature, 
-                        indoorTemp: [
-                            indoorTemp.left.toFixed(1),
-                            indoorTemp.right.toFixed(1)
-                        ], 
-                        timestamp: moment.unix(timestamp).format('YYYY-MM-DD HH:mm Z')
-                    });
                 }
                 response.data.hourly.data.push({
                     time: unixTime,
