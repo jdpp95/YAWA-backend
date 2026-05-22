@@ -158,7 +158,7 @@ const openMeteo = async (req, res) => {
         const temperatureCorrection = await getTemperatureCorrection(historicalWeatherParams, currentWeatherParams);
         console.log("Temperature correction:", temperatureCorrection.toFixed(2), "°C");
         if (!isHistorical) {
-            console.log(apiResponse.data.daily);
+            // console.log(apiResponse.data.daily);
             apiResponse.data.current_weather.temperature += temperatureCorrection;
             apiResponse.data.hourly.temperature_2m = apiResponse.data.hourly.temperature_2m.map(temp => temp + temperatureCorrection);
             apiResponse.data.hourly.apparent_temperature = apiResponse.data.hourly.apparent_temperature = [];
@@ -248,12 +248,12 @@ const openMeteo = async (req, res) => {
 
             const thermodynamics = {
                 left: {
-                    increaseFactor: 0.15,
-                    decreaseFactor: 0.015
+                    increaseFactor: 0.6,
+                    decreaseFactor: 0.04
                 },
                 right: {
-                    increaseFactor: 0.45,
-                    decreaseFactor: 0.07
+                    increaseFactor: 0.7,
+                    decreaseFactor: 0.09
                 }
             };
             let lowerIndex, upperIndex = -1, minutesPassed = -1;
