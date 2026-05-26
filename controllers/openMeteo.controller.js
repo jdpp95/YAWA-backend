@@ -42,8 +42,20 @@ async function getTemperatureCorrection(historicalParams, currentParams, daysAgo
             timeformat: 'unixtime'
         }
     };
-    const historicalInstance = axios.create(historicalParamsWithDate);
-    const historicalResp = await historicalInstance.get();
+    const historicalInstance = axios.create({
+        ...historicalParamsWithDate,
+        timeout: 5000
+    });
+
+    let historicalResp;
+    try {
+        historicalResp = await historicalInstance.get();
+    } catch (err) {
+        console.warn('Historical API request failed, falling back to 0 correction:', err && err.message ? err.message : err);
+        // If the historical endpoint fails (timeout or other error), return 0 correction
+        // to avoid applying an invalid offset to current/forecast temperatures.
+        return 0;
+    }
 
     // Filter historical hourly temps for that same local date using the same offsetMinutes
     const histTimes = historicalResp.data.hourly.time;
