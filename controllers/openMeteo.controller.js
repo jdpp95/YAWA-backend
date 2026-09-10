@@ -4,6 +4,25 @@ const { getSunAngleFromTime, getSunAngleFromTimestamp } = require("../utils/getS
 const { transition } = require("../utils/transition.js");
 const { computeIndoorTemperature } = require("../utils/computeIndoorTemperature.js");
 
+const indoorProfiles = {
+    tropical: {
+        left: { increaseFactor: 0.45, decreaseFactor: 0.2 },
+        right: { increaseFactor: 0.45, decreaseFactor: 0.2 }
+    },
+    semi_tropical: {
+        left: { increaseFactor: 0.45, decreaseFactor: 0.2 },
+        right: { increaseFactor: 0.45, decreaseFactor: 0.07 }
+    },
+    highlands: {
+        left: { increaseFactor: 0.45, decreaseFactor: 0.07 },
+        right: { increaseFactor: 0.15, decreaseFactor: 0.015 }
+    },
+    outside: {
+        left: { increaseFactor: Infinity, decreaseFactor: Infinity },
+        right: { increaseFactor: Infinity, decreaseFactor: Infinity }
+    }
+};
+
 // Reusable function to compute temperature correction
 async function getTemperatureCorrection(historicalParams, currentParams, daysAgo = 7) {
     // Fetch the current/forecast response first so we can obtain the location's utc offset
@@ -85,8 +104,15 @@ const openMeteo = async (req, res) => {
         timestamp,
         start_timestamp: startTimestamp,
         end_timestamp: endTimestamp,
-        utc
+        utc,
+        house_profile: houseProfile = 'highlands'
     } = req.query;
+
+    if (!Object.prototype.hasOwnProperty.call(indoorProfiles, houseProfile)) {
+        return res.status(400).json({
+            error: `Invalid house_profile. Supported values: ${Object.keys(indoorProfiles).join(', ')}`
+        });
+    }
 
     const openMeteoForecastUrl = "https://api.open-meteo.com/v1/forecast";
     const openMeteoHistoryUrl = "https://archive-api.open-meteo.com/v1/archive";
@@ -258,16 +284,7 @@ const openMeteo = async (req, res) => {
             // Display the data which spans from local date at 0h to local date at 23h
             response.data.hourly = { data: [] }
 
-            const thermodynamics = {
-                left: {
-                    increaseFactor: 0.6,
-                    decreaseFactor: 0.04
-                },
-                right: {
-                    increaseFactor: 0.7,
-                    decreaseFactor: 0.09
-                }
-            };
+            const thermodynamics = indoorProfiles[houseProfile];
             let lowerIndex, upperIndex = -1, minutesPassed = -1;
             let indoorTemp = { left: null, right: null };
             let previousIndoorTemp = { left: null, right: null };
