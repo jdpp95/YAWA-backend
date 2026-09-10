@@ -7,19 +7,28 @@ const { computeIndoorTemperature } = require("../utils/computeIndoorTemperature.
 const indoorProfiles = {
     tropical: {
         left: { increaseFactor: 0.45, decreaseFactor: 0.2 },
-        right: { increaseFactor: 0.45, decreaseFactor: 0.2 }
+        right: { increaseFactor: 0.45, decreaseFactor: 0.2 },
+        extra: { increaseFactor: 0.45, decreaseFactor: 0.07 }
     },
     semi_tropical: {
         left: { increaseFactor: 0.45, decreaseFactor: 0.2 },
-        right: { increaseFactor: 0.45, decreaseFactor: 0.07 }
+        right: { increaseFactor: 0.45, decreaseFactor: 0.07 },
+        extra: { increaseFactor: 0.15, decreaseFactor: 0.015 }
     },
     highlands: {
         left: { increaseFactor: 0.45, decreaseFactor: 0.07 },
-        right: { increaseFactor: 0.15, decreaseFactor: 0.015 }
+        right: { increaseFactor: 0.15, decreaseFactor: 0.015 },
+        extra: { increaseFactor: 0.45, decreaseFactor: 0.03 }
     },
     outside: {
         left: { increaseFactor: Infinity, decreaseFactor: Infinity },
-        right: { increaseFactor: Infinity, decreaseFactor: Infinity }
+        right: { increaseFactor: Infinity, decreaseFactor: Infinity },
+        extra: { increaseFactor: Infinity, decreaseFactor: Infinity }
+    },
+    bus: {
+        left: { increaseFactor: 0.75, decreaseFactor: 0.18 },
+        right: { increaseFactor: 0.75, decreaseFactor: 0.18 },
+        extra: { increaseFactor: 0.75, decreaseFactor: 0.18 }
     }
 };
 
@@ -286,13 +295,17 @@ const openMeteo = async (req, res) => {
 
             const thermodynamics = indoorProfiles[houseProfile];
             let lowerIndex, upperIndex = -1, minutesPassed = -1;
-            let indoorTemp = { left: null, right: null };
-            let previousIndoorTemp = { left: null, right: null };
+            let indoorTemp = { left: null, right: null, extra: null };
+            let previousIndoorTemp = { left: null, right: null, extra: null };
             apiResponse.data.hourly.time.forEach((unixTime, index) => {
                 if (unixTime <= timestamp) {
                     const currentTemperature = apiResponse.data.hourly.temperature_2m[index]
                     if (indoorTemp.left === null) {
-                        previousIndoorTemp = { left: currentTemperature, right: currentTemperature };
+                        previousIndoorTemp = {
+                            left: currentTemperature,
+                            right: currentTemperature,
+                            extra: currentTemperature
+                        };
                     } else {
                         previousIndoorTemp = { ...indoorTemp };
                     }
@@ -307,6 +320,12 @@ const openMeteo = async (req, res) => {
                         previousIndoorTemp.right,
                         thermodynamics.right.decreaseFactor,
                         thermodynamics.right.increaseFactor
+                    );
+                    indoorTemp.extra = computeIndoorTemperature(
+                        currentTemperature,
+                        previousIndoorTemp.extra,
+                        thermodynamics.extra.decreaseFactor,
+                        thermodynamics.extra.increaseFactor
                     );
                 }
                 response.data.hourly.data.push({
