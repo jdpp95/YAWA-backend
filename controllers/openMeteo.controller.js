@@ -11,13 +11,13 @@ const indoorProfiles = {
         extra: { increaseFactor: 0.45, decreaseFactor: 0.07 }
     },
     semi_tropical: {
-        left: { increaseFactor: 0.45, decreaseFactor: 0.2 },
-        right: { increaseFactor: 0.45, decreaseFactor: 0.07 },
+        left: { increaseFactor: 0.45, decreaseFactor: 0.07 },
+        right: { increaseFactor: 0.45, decreaseFactor: 0.2 },
         extra: { increaseFactor: 0.15, decreaseFactor: 0.015 }
     },
     highlands: {
-        left: { increaseFactor: 0.45, decreaseFactor: 0.07 },
-        right: { increaseFactor: 0.15, decreaseFactor: 0.015 },
+        left: { increaseFactor: 0.45, decreaseFactor: 0.015 },
+        right: { increaseFactor: 0.15, decreaseFactor: 0.07 },
         extra: { increaseFactor: 0.45, decreaseFactor: 0.03 }
     },
     outside: {
