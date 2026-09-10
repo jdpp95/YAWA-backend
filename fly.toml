@@ -6,6 +6,7 @@ kill_timeout = 5
 processes = []
 
 [env]
+  NODE_OPTIONS = "--dns-result-order=ipv4first"
 
 [experimental]
   allowed_public_ports = []
@@ -19,7 +20,7 @@ processes = []
   script_checks = []
   [services.concurrency]
     hard_limit = 25
-    soft_limit = 20
+    soft_limit = 21
     type = "connections"
 
   [[services.ports]]
